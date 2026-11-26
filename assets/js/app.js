@@ -4,8 +4,8 @@
   var ICONS = {
     github:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>',
-    book:
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+    help:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
     user:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
     mail:
@@ -22,7 +22,6 @@
     { key: "tags", label: "标签", href: "tags.html" },
     { key: "search", label: "搜索", href: "search.html" },
     { key: "about", label: "关于", href: "about.html" },
-    { key: "books", label: "读书笔记", href: "books.html" },
     { key: "faq", label: "FAQ", href: "faq.html" }
   ];
 
@@ -76,62 +75,28 @@
       " · <span>Hosted on GitHub Pages</span>";
   }
 
-  function fetchJson(path) {
-    return fetch(path, { cache: "no-cache" }).then(function (res) {
-      if (!res.ok) throw new Error("Failed to load " + path);
-      return res.json();
-    });
-  }
-
-  function loadAllContent() {
-    return Promise.all([fetchJson("data/posts.json"), fetchJson("data/books.json")]).then(
-      function (results) {
-        var posts = (results[0] || [])
+  function loadPosts() {
+    return fetch("data/posts.json", { cache: "no-cache" })
+      .then(function (res) {
+        if (!res.ok) throw new Error("Failed to load data/posts.json");
+        return res.json();
+      })
+      .then(function (items) {
+        return (items || [])
           .filter(function (item) {
             return item.public === true;
           })
-          .map(function (item) {
-            return Object.assign({}, item, { type: "posts", typeLabel: "分享" });
+          .sort(function (a, b) {
+            return String(b.date || "").localeCompare(String(a.date || ""));
           });
-
-        var books = (results[1] || [])
-          .filter(function (item) {
-            return item.public === true;
-          })
-          .map(function (item) {
-            return Object.assign({}, item, { type: "books", typeLabel: "读书笔记" });
-          });
-
-        var sortDesc = function (a, b) {
-          return String(b.date || "").localeCompare(String(a.date || ""));
-        };
-
-        posts.sort(sortDesc);
-        books.sort(sortDesc);
-
-        var all = posts.concat(books).sort(sortDesc);
-        return { posts: posts, books: books, all: all };
-      }
-    );
+      });
   }
 
-  function itemUrl(item) {
-    return "post.html?type=" + encodeURIComponent(item.type) + "&slug=" + encodeURIComponent(item.slug);
+  function postUrl(item) {
+    return "post.html?slug=" + encodeURIComponent(item.slug);
   }
 
-  function renderEntryCard(item, showTypeBadge) {
-    var isBook = item.type === "books";
-    var badgeText = showTypeBadge ? item.typeLabel : isBook && item.status ? item.status : "";
-    var badgeHtml = badgeText ? '<span class="entry-badge">' + esc(badgeText) + "</span>" : "";
-
-    var bookAuthorHtml =
-      isBook && item.bookAuthor
-        ? '<div class="entry-book-author">作者：' +
-          esc(item.bookAuthor) +
-          (item.rating ? " · 推荐指数：" + esc(item.rating) : "") +
-          "</div>"
-        : "";
-
+  function renderEntryCard(item) {
     var metaParts = [];
     if (item.date) metaParts.push("<span>" + esc(item.date) + "</span>");
     if (item.readingTime) metaParts.push("<span>约 " + esc(item.readingTime) + " 分钟</span>");
@@ -143,12 +108,10 @@
       '<article class="post-entry">' +
       '  <header class="entry-header">' +
       "    <h2>" + esc(item.title) + "</h2>" +
-      badgeHtml +
       "  </header>" +
-      bookAuthorHtml +
       (item.summary ? '  <section class="entry-content"><p>' + esc(item.summary) + "</p></section>" : "") +
       '  <footer class="entry-footer">' + metaParts.join("<span>·</span>") + "</footer>" +
-      '  <a class="entry-link" aria-label="' + esc(item.title) + '" href="' + itemUrl(item) + '"></a>' +
+      '  <a class="entry-link" aria-label="' + esc(item.title) + '" href="' + postUrl(item) + '"></a>' +
       "</article>"
     );
   }
@@ -188,65 +151,16 @@
         "</div>";
     }
 
-    var filterEl = document.getElementById("home-filter");
     var listEl = document.getElementById("post-list");
     if (!listEl) return;
 
-    loadAllContent()
-      .then(function (data) {
-        var currentFilter = "all";
-
-        function draw() {
-          var items =
-            currentFilter === "posts"
-              ? data.posts
-              : currentFilter === "books"
-                ? data.books
-                : data.all;
-
-          if (!items.length) {
-            listEl.innerHTML = '<div class="empty-state">暂时还没有公开内容。</div>';
-            return;
-          }
-          listEl.innerHTML = items
-            .map(function (item) {
-              return renderEntryCard(item, true);
-            })
-            .join("");
+    loadPosts()
+      .then(function (posts) {
+        if (!posts.length) {
+          listEl.innerHTML = '<div class="empty-state">暂时还没有公开文章。</div>';
+          return;
         }
-
-        if (filterEl) {
-          var tabs = [
-            { key: "all", label: "全部 (" + data.all.length + ")" },
-            { key: "posts", label: "分享 (" + data.posts.length + ")" },
-            { key: "books", label: "读书笔记 (" + data.books.length + ")" }
-          ];
-          filterEl.innerHTML = tabs
-            .map(function (tab) {
-              return (
-                '<button type="button" class="filter-pill' +
-                (tab.key === currentFilter ? " active" : "") +
-                '" data-filter="' +
-                tab.key +
-                '">' +
-                tab.label +
-                "</button>"
-              );
-            })
-            .join("");
-
-          filterEl.addEventListener("click", function (e) {
-            var btn = e.target.closest("[data-filter]");
-            if (!btn) return;
-            currentFilter = btn.getAttribute("data-filter");
-            filterEl.querySelectorAll(".filter-pill").forEach(function (el) {
-              el.classList.toggle("active", el === btn);
-            });
-            draw();
-          });
-        }
-
-        draw();
+        listEl.innerHTML = posts.map(renderEntryCard).join("");
       })
       .catch(function () {
         listEl.innerHTML =
@@ -254,88 +168,18 @@
       });
   }
 
-  function initBooksPage() {
-    var filterEl = document.getElementById("books-filter");
-    var listEl = document.getElementById("books-list");
-    if (!listEl) return;
-
-    loadAllContent()
-      .then(function (data) {
-        var books = data.books;
-        var activeTag = "全部";
-
-        var tagSet = [];
-        books.forEach(function (b) {
-          (b.tags || []).forEach(function (t) {
-            if (tagSet.indexOf(t) === -1) tagSet.push(t);
-          });
-        });
-
-        function draw() {
-          var filtered =
-            activeTag === "全部"
-              ? books
-              : books.filter(function (b) {
-                  return (b.tags || []).indexOf(activeTag) !== -1;
-                });
-
-          if (!filtered.length) {
-            listEl.innerHTML = '<div class="empty-state">暂无公开读书笔记。</div>';
-            return;
-          }
-          listEl.innerHTML = filtered
-            .map(function (item) {
-              return renderEntryCard(item, false);
-            })
-            .join("");
-        }
-
-        if (filterEl && tagSet.length) {
-          var tags = ["全部"].concat(tagSet);
-          filterEl.innerHTML = tags
-            .map(function (tag) {
-              return (
-                '<button type="button" class="filter-pill' +
-                (tag === activeTag ? " active" : "") +
-                '" data-tag="' +
-                esc(tag) +
-                '">' +
-                esc(tag) +
-                "</button>"
-              );
-            })
-            .join("");
-
-          filterEl.addEventListener("click", function (e) {
-            var btn = e.target.closest("[data-tag]");
-            if (!btn) return;
-            activeTag = btn.getAttribute("data-tag");
-            filterEl.querySelectorAll(".filter-pill").forEach(function (el) {
-              el.classList.toggle("active", el === btn);
-            });
-            draw();
-          });
-        }
-
-        draw();
-      })
-      .catch(function () {
-        listEl.innerHTML = '<div class="empty-state">加载读书笔记失败。</div>';
-      });
-  }
-
   function initArchivesPage() {
     var container = document.getElementById("archives-container");
     if (!container) return;
 
-    loadAllContent()
-      .then(function (data) {
-        if (!data.all.length) {
+    loadPosts()
+      .then(function (posts) {
+        if (!posts.length) {
           container.innerHTML = '<div class="empty-state">暂时还没有归档内容。</div>';
           return;
         }
         var groups = {};
-        data.all.forEach(function (item) {
+        posts.forEach(function (item) {
           var year = (item.date || "其他").slice(0, 4);
           if (!groups[year]) groups[year] = [];
           groups[year].push(item);
@@ -352,12 +196,8 @@
                 return (
                   '<div class="archive-entry">' +
                   '  <span class="archive-entry-title">' + esc(item.title) + "</span>" +
-                  '  <span class="archive-entry-meta">' +
-                  esc(item.typeLabel) +
-                  " · " +
-                  esc(item.date || "") +
-                  "  </span>" +
-                  '  <a class="entry-link" aria-label="' + esc(item.title) + '" href="' + itemUrl(item) + '"></a>' +
+                  '  <span class="archive-entry-meta">' + esc(item.date || "") + "</span>" +
+                  '  <a class="entry-link" aria-label="' + esc(item.title) + '" href="' + postUrl(item) + '"></a>' +
                   "</div>"
                 );
               })
@@ -389,10 +229,10 @@
     var params = new URLSearchParams(window.location.search);
     var selectedTag = params.get("tag") || "";
 
-    loadAllContent()
-      .then(function (data) {
+    loadPosts()
+      .then(function (posts) {
         var counts = {};
-        data.all.forEach(function (item) {
+        posts.forEach(function (item) {
           (item.tags || []).forEach(function (tag) {
             counts[tag] = (counts[tag] || 0) + 1;
           });
@@ -426,16 +266,12 @@
             .join("");
 
           var matched = selectedTag
-            ? data.all.filter(function (item) {
+            ? posts.filter(function (item) {
                 return (item.tags || []).indexOf(selectedTag) !== -1;
               })
-            : data.all;
+            : posts;
 
-          listEl.innerHTML = matched
-            .map(function (item) {
-              return renderEntryCard(item, true);
-            })
-            .join("");
+          listEl.innerHTML = matched.map(renderEntryCard).join("");
         }
 
         cloudEl.addEventListener("click", function (e) {
@@ -462,22 +298,16 @@
     var listEl = document.getElementById("search-results");
     if (!inputEl || !listEl) return;
 
-    loadAllContent()
-      .then(function (data) {
+    loadPosts()
+      .then(function (posts) {
         function search(q) {
           var keyword = q.trim().toLowerCase();
           if (!keyword) {
-            listEl.innerHTML = '<div class="empty-state">输入关键词，搜索公开的分享与读书笔记。</div>';
+            listEl.innerHTML = '<div class="empty-state">输入关键词，搜索站内分享文章。</div>';
             return;
           }
-          var matched = data.all.filter(function (item) {
-            var haystack = [
-              item.title,
-              item.summary,
-              item.bookAuthor,
-              item.typeLabel,
-              (item.tags || []).join(" ")
-            ]
+          var matched = posts.filter(function (item) {
+            var haystack = [item.title, item.summary, (item.tags || []).join(" ")]
               .join(" ")
               .toLowerCase();
             return haystack.indexOf(keyword) !== -1;
@@ -487,11 +317,7 @@
             listEl.innerHTML = '<div class="empty-state">没有找到与「' + esc(q.trim()) + '」相关的内容。</div>';
             return;
           }
-          listEl.innerHTML = matched
-            .map(function (item) {
-              return renderEntryCard(item, true);
-            })
-            .join("");
+          listEl.innerHTML = matched.map(renderEntryCard).join("");
         }
 
         inputEl.addEventListener("input", function () {
@@ -560,29 +386,27 @@
     if (!articleEl) return;
 
     var params = new URLSearchParams(window.location.search);
-    var type = params.get("type") === "books" ? "books" : "posts";
     var slug = params.get("slug") || "";
 
-    loadAllContent()
-      .then(function (data) {
-        var list = type === "books" ? data.books : data.posts;
-        var idx = list.findIndex(function (item) {
+    loadPosts()
+      .then(function (posts) {
+        var idx = posts.findIndex(function (item) {
           return item.slug === slug;
         });
 
         if (idx === -1) {
           articleEl.innerHTML =
-            '<div class="empty-state">未找到该文章，或该笔记当前未设为公开。<br><br><a href="index.html">返回首页 →</a></div>';
+            '<div class="empty-state">未找到该文章，或该文章当前未设为公开。<br><br><a href="index.html">返回首页 →</a></div>';
           return;
         }
 
-        var item = list[idx];
-        var prevItem = idx > 0 ? list[idx - 1] : null;
-        var nextItem = idx < list.length - 1 ? list[idx + 1] : null;
+        var item = posts[idx];
+        var prevItem = idx > 0 ? posts[idx - 1] : null;
+        var nextItem = idx < posts.length - 1 ? posts[idx + 1] : null;
 
         document.title = item.title + " · " + (cfg.titleSuffix || "Personal Log");
 
-        var mdPath = item.file || "content/" + type + "/" + item.slug + ".md";
+        var mdPath = item.file || "content/posts/" + item.slug + ".md";
 
         return fetch(mdPath, { cache: "no-cache" })
           .then(function (res) {
@@ -592,27 +416,10 @@
           .then(function (md) {
             var rendered = window.SimpleMarkdown.render(md);
 
-            var crumbLink =
-              type === "books"
-                ? '<a href="books.html">读书笔记</a>'
-                : '<a href="index.html">分享</a>';
-
             var metaParts = [];
             if (item.date) metaParts.push("<span>发布于 " + esc(item.date) + "</span>");
             if (item.readingTime) metaParts.push("<span>约 " + esc(item.readingTime) + " 分钟阅读</span>");
             metaParts.push("<span>作者：" + esc(cfg.author || "Yam") + "</span>");
-
-            var bookMetaHtml = "";
-            if (type === "books") {
-              var fields = [];
-              if (item.bookTitle) fields.push("<span><strong>书名：</strong>" + esc(item.bookTitle) + "</span>");
-              if (item.bookAuthor) fields.push("<span><strong>作者：</strong>" + esc(item.bookAuthor) + "</span>");
-              if (item.status) fields.push("<span><strong>状态：</strong>" + esc(item.status) + "</span>");
-              if (item.rating) fields.push("<span><strong>推荐：</strong>" + esc(item.rating) + "</span>");
-              if (fields.length) {
-                bookMetaHtml = '<div class="book-meta-card">' + fields.join("") + "</div>";
-              }
-            }
 
             var tocHtml = "";
             if (rendered.toc.length >= 2) {
@@ -646,14 +453,14 @@
                 '<nav class="paginav" aria-label="文章导航">' +
                 (prevItem
                   ? '<a class="prev" href="' +
-                    itemUrl(prevItem) +
+                    postUrl(prevItem) +
                     '"><span class="nav-label">« 上一篇</span><span class="nav-title">' +
                     esc(prevItem.title) +
                     "</span></a>"
                   : "") +
                 (nextItem
                   ? '<a class="next" href="' +
-                    itemUrl(nextItem) +
+                    postUrl(nextItem) +
                     '"><span class="nav-label">下一篇 »</span><span class="nav-title">' +
                     esc(nextItem.title) +
                     "</span></a>"
@@ -663,11 +470,10 @@
 
             articleEl.innerHTML =
               '<header class="post-header">' +
-              '  <div class="post-breadcrumbs"><a href="index.html">首页</a> / ' + crumbLink + "</div>" +
+              '  <div class="post-breadcrumbs"><a href="index.html">首页</a> / <a href="index.html">分享</a></div>' +
               '  <h1 class="post-title">' + esc(item.title) + "</h1>" +
               '  <div class="post-meta">' + metaParts.join("<span>·</span>") + "</div>" +
               "</header>" +
-              bookMetaHtml +
               tocHtml +
               '<div class="post-content">' + rendered.html + "</div>" +
               '<footer class="post-footer">' + tagsHtml + navHtml + "</footer>";
@@ -682,15 +488,12 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     var page = document.body.getAttribute("data-page") || "home";
-    var navKey = page === "post"
-      ? (new URLSearchParams(window.location.search).get("type") === "books" ? "books" : "home")
-      : page;
+    var navKey = page === "post" ? "home" : page;
 
     renderHeader(navKey);
     renderFooter();
 
     if (page === "home") initHomePage();
-    else if (page === "books") initBooksPage();
     else if (page === "archives") initArchivesPage();
     else if (page === "tags") initTagsPage();
     else if (page === "search") initSearchPage();

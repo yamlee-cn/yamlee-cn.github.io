@@ -3,9 +3,9 @@
     "slug": "hello-world",
     "title": "你好，开始记录与分享",
     "date": "2026-11-27",
-    "readingTime": 3,
+    "readingTime": 2,
     "tags": ["随笔", "建站"],
-    "summary": "为什么搭建这个个人主页，以及之后打算在这里记录些什么：技术与工作中的实践分享，还有精选的公开读书笔记。",
+    "summary": "为什么搭建这个个人主页，以及之后打算在这里记录些什么：围绕经济与心理两大核心议题的纯理论阅读思考与概念分享。",
     "file": "content/posts/hello-world.md",
     "public": true
   }
