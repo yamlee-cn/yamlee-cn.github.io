@@ -1,0 +1,8 @@
+.DS_Store
+Thumbs.db
+
+# 本地私密笔记（永远不会被 Git 追踪或推送到 GitHub）
+content/private/
+*.local.md
+*.private.md
+data/*.local.json
