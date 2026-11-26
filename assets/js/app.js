@@ -18,11 +18,12 @@
 
   var NAV_ITEMS = [
     { key: "home", label: "分享", href: "index.html" },
-    { key: "books", label: "读书笔记", href: "books.html" },
     { key: "archives", label: "归档", href: "archives.html" },
     { key: "tags", label: "标签", href: "tags.html" },
     { key: "search", label: "搜索", href: "search.html" },
-    { key: "about", label: "关于", href: "about.html" }
+    { key: "about", label: "关于", href: "about.html" },
+    { key: "books", label: "读书笔记", href: "books.html" },
+    { key: "faq", label: "FAQ", href: "faq.html" }
   ];
 
   function esc(str) {
@@ -519,11 +520,11 @@
     });
   }
 
-  function initAboutPage() {
-    var contentEl = document.getElementById("about-content");
+  function initMarkdownPage(elementId, mdPath, fallbackHtml) {
+    var contentEl = document.getElementById(elementId);
     if (!contentEl) return;
 
-    fetch("content/about.md", { cache: "no-cache" })
+    fetch(mdPath, { cache: "no-cache" })
       .then(function (res) {
         if (!res.ok) throw new Error("not found");
         return res.text();
@@ -534,8 +535,24 @@
         bindCopyButtons(contentEl);
       })
       .catch(function () {
-        contentEl.innerHTML = '<p>欢迎来到我的个人主页。你可以直接编辑 <code>content/about.md</code> 来完善这里的自我介绍。</p>';
+        contentEl.innerHTML = fallbackHtml;
       });
+  }
+
+  function initAboutPage() {
+    initMarkdownPage(
+      "about-content",
+      "content/about.md",
+      '<p>欢迎来到我的个人主页。你可以直接编辑 <code>content/about.md</code> 来完善这里的自我介绍。</p>'
+    );
+  }
+
+  function initFaqPage() {
+    initMarkdownPage(
+      "faq-content",
+      "content/faq.md",
+      '<p>你可以在 <code>content/faq.md</code> 中编写常见问答与站点说明。</p>'
+    );
   }
 
   function initPostPage() {
@@ -678,6 +695,7 @@
     else if (page === "tags") initTagsPage();
     else if (page === "search") initSearchPage();
     else if (page === "about") initAboutPage();
+    else if (page === "faq") initFaqPage();
     else if (page === "post") initPostPage();
   });
 })();
